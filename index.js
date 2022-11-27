@@ -22,6 +22,7 @@ async function run() {
   try {
     const brandsCollection = client.db('sellPhone').collection('brands');
     const phoneCollection = client.db('sellPhone').collection('allPhones');
+    const ordersCollection = client.db('sellPhone').collection('orders');
 
     app.get('/brands', async (req, res) => {
       const query = {};
@@ -36,6 +37,13 @@ async function run() {
         brand: query,
       };
       const result = await phoneCollection.find(filter).toArray();
+      res.send(result);
+    });
+
+    app.post('/orders', async (req, res) => {
+      const orders = req.body;
+      console.log(orders);
+      const result = await ordersCollection.insertOne(orders);
       res.send(result);
     });
   } finally {
