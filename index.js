@@ -19,6 +19,22 @@ const client = new MongoClient(uri, {
   serverApi: ServerApiVersion.v1,
 });
 
+function verifyJWT(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).send('Unauthorized Access');
+  }
+
+  const token = authHeader.split(' ')[1];
+  jwt.verify(token, process.env.ACCESS_TOKEN, function (err, decoded) {
+    if (err) {
+      return res.status(403).send({ message: 'Forbidden Access' });
+    }
+    req.decoded = decoded;
+    next();
+  });
+}
+
 async function run() {
   try {
     const brandsCollection = client.db('sellPhone').collection('brands');
@@ -42,9 +58,15 @@ async function run() {
       res.send(result);
     });
 
-    app.get('/orders', async (req, res) => {
+    app.get('/orders', verifyJWT, async (req, res) => {
       const email = req.query.email;
+      const decodedEmail = req.decoded.email;
+      if (email !== decodedEmail) {
+        return res.status(403).send({ message: 'Forbidden Access' });
+      }
+
       const query = { email: email };
+
       const orders = await ordersCollection.find(query).toArray();
       res.send(orders);
     });
@@ -70,9 +92,15 @@ async function run() {
       res.status(403).send({ accessToken: '' });
     });
 
+    app.get('/users', async (req, res) => {
+      const query = {};
+      const users = await usersCollection.find(query).toArray();
+      res.send(users);
+    });
+
     app.post('/users', async (req, res) => {
       const user = req.body;
-      const result = await usersCollection.findOne(user);
+      const result = await usersCollection.insertOne(user);
       res.send(result);
     });
   } finally {
